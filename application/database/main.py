@@ -1,8 +1,8 @@
 import aiomysql
-import asyncio
 
+from application.database import user # profile, email
 from application.utils.logger import Logger
-from configs.main import DB_HOST, DB_NAME, DB_PASS, DB_USER
+from configs.main import DB_USER, DB_PASS, DB_NAME, DB_HOST
 
 class Database:
     def __init__(self, app):
@@ -10,8 +10,14 @@ class Database:
         self.connection = None
         self.cursor = None
 
+        # Modules
+        self.user = user.User(self)
+        self.profile = None
+        self.email = None
+
     async def connect(self):
         """Établit une connexion asynchrone à la base de données"""
+        Logger.info("Connexion à la base de données...")
         try:
             self.connection = await aiomysql.connect(
                 host=DB_HOST,
@@ -21,9 +27,9 @@ class Database:
                 db=DB_NAME
             )
             self.cursor = await self.connection.cursor()
-            Logger.success("Connexion asynchrone à la base de données établie")
+            Logger.success("Connexion à la base de données établie")
         except Exception as e:
-            Logger.error(f"Erreur de connexion à la base de données : {e}")
+            Logger.error(f"Connexion à la base de données échouée : {e}")
             raise e
 
     async def close(self):
@@ -41,9 +47,11 @@ class Database:
             await self.cursor.execute(query, params or ())
             await self.connection.commit()
             Logger.info("Requête exécutée avec succès")
+            return True
         except Exception as e:
             Logger.warning(f"Exécution de la requête non réussie : {e}")
             await self.connection.rollback()
+            return False
 
     async def fetch_one(self, query, params=None):
         """Récupère une seule ligne de résultats d'une requête SELECT de manière asynchrone"""
@@ -64,36 +72,3 @@ class Database:
         except Exception as e:
             Logger.warning(f"Récupération des données non réussie : {e}")
             return []
-
-    async def create_user(self, username, avatar, grade, is_banned):
-        """Exemple pour insérer un utilisateur dans la base de données de manière asynchrone"""
-        query = """INSERT INTO Utilisateur (username, avatar, grade, is_banned) 
-                   VALUES (%s, %s, %s, %s)"""
-        params = (username, avatar, grade, is_banned)
-        await self.query(query, params)
-
-    async def get_user_by_id(self, user_id):
-        """Exemple pour récupérer un utilisateur par ID de manière asynchrone"""
-        query = "SELECT * FROM Utilisateur WHERE id = %s"
-        result = await self.fetch_one(query, (user_id,))
-        return result
-
-# Exemple d'utilisation de la classe Database dans une application
-async def main():
-    db = Database(None)  # 'None' ici, mais tu peux y passer ton app si nécessaire
-    await db.connect()
-
-    # Exemple d'ajout d'un utilisateur
-    await db.create_user('JohnDoe', 'https://example.com/avatar.png', 'admin', False)
-
-    # Exemple de récupération d'un utilisateur par ID
-    user = await db.get_user_by_id(1)
-    if user:
-        print(f"Utilisateur récupéré : {user}")
-
-    # Fermer la connexion à la base de données
-    await db.close()
-
-# Démarre l'application asynchrone
-if __name__ == "__main__":
-    asyncio.run(main())
