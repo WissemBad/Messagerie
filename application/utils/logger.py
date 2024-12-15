@@ -41,7 +41,7 @@ class Logger:
 
     @staticmethod
     def info(message):
-        print(f"[{Logger._get_current_time()}] {Logger.CYAN}[Info]{Logger.RESET} {message}")
+        print(f"[{Logger._get_current_time()}] {Logger.CYAN}[Information]{Logger.RESET} {message}")
 
     @staticmethod
     def custom(message, color=WHITE):
